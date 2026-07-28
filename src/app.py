@@ -3,8 +3,10 @@
 File chính ghép nối tất cả các thành phần: Tools + Prompts + Test Cases + Multi-Provider.
 """
 
+import inspect
 import json
 import os
+import re
 import sys
 from dotenv import load_dotenv
 
@@ -50,31 +52,58 @@ def run_baseline_chatbot(user_query: str, provider):
     print(f"🤖 Chatbot trả lời:\n{response}")
 
 
-def run_react_agent(user_query: str, provider):
-    """
-    Dựng vòng lặp ReAct Agent (Thought -> Action -> Observation) có Guardrails.
-    TODO Mốc 3: Thay demo hardcode bằng vòng lặp ReAct thực sự dùng LLM parse Thought/Action.
-    """
-    print(f"\n🤖 [REACT AGENT] Câu hỏi: {user_query}")
-    step = 0
+def parse_action(text: str):
+    """Parse 'Action: tool_name[param]' từ output LLM. Trả về (tool_name, param) hoặc None."""
+    m = re.search(r"Action:\s*(\w+)\[([^\]]*)\]", text)
+    if m:
+        return m.group(1), m.group(2).strip()
+    return None
 
-    while step < MAX_ITERATIONS:
-        step += 1
+
+def execute_tool(tool_name: str, param: str) -> str:
+    """Gọi tool từ AVAILABLE_TOOLS, trả về kết quả hoặc thông báo lỗi."""
+    if tool_name not in AVAILABLE_TOOLS:
+        return f"[Lỗi] Không tìm thấy công cụ '{tool_name}'. Các tool khả dụng: {', '.join(AVAILABLE_TOOLS.keys())}"
+    func = AVAILABLE_TOOLS[tool_name]
+    try:
+        if not param:
+            return func()
+        max_params = len(inspect.signature(func).parameters)
+        args = [a.strip().strip("'\"") for a in param.split(",", maxsplit=max(max_params - 1, 0))]
+        return func(*args)
+    except Exception as e:
+        return f"[Lỗi gọi tool] {e}"
+
+
+def run_react_agent(user_query: str, provider):
+    """Vòng lặp ReAct: LLM sinh Thought/Action → parse → gọi tool → Observation → lặp."""
+    print(f"\n🤖 [REACT AGENT] Câu hỏi: {user_query}")
+
+    conversation = f"User: {user_query}"
+
+    for step in range(1, MAX_ITERATIONS + 1):
         print(f"\n--- Vòng lặp ReAct (Step {step}/{MAX_ITERATIONS}) ---")
 
-        if step == 1:
-            print("Thought: Người dùng hỏi về ngân sách, cần tra cứu số dư hiện tại.")
-            print("Action: check_budget_remaining[]")
-            obs = AVAILABLE_TOOLS["check_budget_remaining"]()
-            print(f"Observation: {obs}")
+        llm_output = provider.generate(conversation, system_prompt=REACT_SYSTEM_PROMPT)
+        print(llm_output)
 
-        elif step == 2:
-            print("Thought: Đã có số dư ngân sách, có thể trả lời người dùng.")
-            print(f"Final Answer: {obs}")
-            break
+        if "Final Answer:" in llm_output:
+            final = llm_output.split("Final Answer:")[-1].strip()
+            print(f"\n✅ [KẾT QUẢ] {final}")
+            return
 
-    if step >= MAX_ITERATIONS:
-        print(f"GUARDRAIL: Đã đạt giới hạn {MAX_ITERATIONS} bước. Ngắt lặp an toàn.")
+        parsed = parse_action(llm_output)
+        if not parsed:
+            print("\n⚠️ LLM không sinh Action hợp lệ. Dừng.")
+            return
+
+        tool_name, param = parsed
+        observation = execute_tool(tool_name, param)
+        print(f"👁️ Observation: {observation}")
+
+        conversation += f"\n{llm_output}\nObservation: {observation}"
+
+    print(f"\n🛡️ GUARDRAIL: Đã đạt giới hạn {MAX_ITERATIONS} bước. Ngắt lặp an toàn.")
 
 
 if __name__ == "__main__":
@@ -97,4 +126,4 @@ if __name__ == "__main__":
     run_baseline_chatbot(sample_query, provider)
     
     print("\n--- DEMO 2: CHẠY TRÊN REACT AGENT ---")
-    # run_react_agent(sample_query, provider)
+    run_react_agent(sample_query, provider)

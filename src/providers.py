@@ -133,11 +133,25 @@ class OpenRouterProvider(BaseLLMProvider):
 
 class MockProvider(BaseLLMProvider):
     """Offline Mock Provider (Cho bài test không cần kết nối API)"""
+    def __init__(self):
+        self.model_name = "mock-offline"
+        self._call_count = 0
+
     def generate(self, prompt: str, system_prompt: str = "") -> str:
+        self._call_count += 1
         text = prompt.lower()
-        if "thời tiết" in text and "hà nội" in text:
-            return "Thought: Cần tra cứu thời tiết Hà Nội.\nAction: get_weather['Hà Nội']"
-        return "🤖 [Mock Provider]: Phản hồi giả lập offline cho bài test."
+
+        if "observation:" in text:
+            return "Thought: Tôi đã có đủ thông tin để trả lời.\nFinal Answer: Số dư ngân sách còn lại: 50,000,000 VNĐ."
+
+        if "ngân sách" in text or "budget" in text:
+            return "Thought: Cần tra cứu số dư ngân sách hiện tại.\nAction: check_budget_remaining[]"
+        if "lịch sử" in text or "history" in text:
+            return "Thought: Cần xem lịch sử yêu cầu chi phí.\nAction: check_request_history[]"
+        if "duyệt" in text and ("triệu" in text or "tỷ" in text):
+            return "Thought: Cần kiểm tra ngân sách trước khi duyệt.\nAction: check_budget_remaining[]"
+
+        return "Thought: Câu hỏi này tôi có thể trả lời từ kiến thức chung.\nFinal Answer: [Mock] Đây là phản hồi giả lập offline cho bài test."
 
 
 def get_llm_provider(provider_name: str = None) -> BaseLLMProvider:

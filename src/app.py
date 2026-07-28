@@ -19,7 +19,7 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 # Import các thành phần từ file của Role 2, Role 3 & Multi-Provider Adapter
-from tools import AVAILABLE_TOOLS, get_weather, search_flights
+from tools import AVAILABLE_TOOLS
 from prompts import CHATBOT_BASELINE_PROMPT, REACT_SYSTEM_PROMPT, MAX_ITERATIONS
 from providers import get_llm_provider
 
@@ -53,34 +53,33 @@ def run_baseline_chatbot(user_query: str, provider):
 def run_react_agent(user_query: str, provider):
     """
     Dựng vòng lặp ReAct Agent (Thought -> Action -> Observation) có Guardrails.
+    TODO Mốc 3: Thay demo hardcode bằng vòng lặp ReAct thực sự dùng LLM parse Thought/Action.
     """
     print(f"\n🤖 [REACT AGENT] Câu hỏi: {user_query}")
     step = 0
-    
+
     while step < MAX_ITERATIONS:
         step += 1
-        print(f"\n--- 🔄 Vòng lặp ReAct (Step {step}/{MAX_ITERATIONS}) ---")
-        
+        print(f"\n--- Vòng lặp ReAct (Step {step}/{MAX_ITERATIONS}) ---")
+
         if step == 1:
-            print("🧠 Thought: Câu hỏi này cần tra cứu thời tiết thời gian thực.")
-            print("🛠️ Action: get_weather['Hà Nội']")
-            
-            # Thực thi tool
-            obs = get_weather("Hà Nội")
-            print(f"👁️ Observation: {obs}")
-            
+            print("Thought: Người dùng hỏi về ngân sách, cần tra cứu số dư hiện tại.")
+            print("Action: check_budget_remaining[]")
+            obs = AVAILABLE_TOOLS["check_budget_remaining"]()
+            print(f"Observation: {obs}")
+
         elif step == 2:
-            print("🧠 Thought: Tôi đã có thông tin thời tiết Hà Nội, giờ tôi có thể tư vấn trang phục.")
-            print("🏁 Final Answer: Thời tiết Hà Nội hôm nay 28°C, nắng nhẹ. Bạn nên mặc áo phông thoáng mát!")
+            print("Thought: Đã có số dư ngân sách, có thể trả lời người dùng.")
+            print(f"Final Answer: {obs}")
             break
-            
+
     if step >= MAX_ITERATIONS:
-        print(f"🛡️ GUARDRAIL TRIGGERED: Đã đạt giới hạn tối đa {MAX_ITERATIONS} bước. Ngắt lặp an toàn!")
+        print(f"GUARDRAIL: Đã đạt giới hạn {MAX_ITERATIONS} bước. Ngắt lặp an toàn.")
 
 
 if __name__ == "__main__":
     print("==================================================")
-    print("🏫 ĐẠI HỌC VINUNI - BÀI LAB 3: CHATBOT VS REACT AGENT")
+    print("TRỢ LÝ DUYỆT CHI PHÍ DOANH NGHIỆP - LAB 3: CHATBOT VS REACT AGENT")
     print("==================================================")
     
     # Khởi tạo Multi-Provider LLM Adapter (Đọc từ biến môi trường LLM_PROVIDER)
@@ -98,4 +97,4 @@ if __name__ == "__main__":
     run_baseline_chatbot(sample_query, provider)
     
     print("\n--- DEMO 2: CHẠY TRÊN REACT AGENT ---")
-    run_react_agent(sample_query, provider)
+    # run_react_agent(sample_query, provider)

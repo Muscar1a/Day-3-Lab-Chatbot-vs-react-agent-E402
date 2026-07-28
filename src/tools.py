@@ -3,47 +3,76 @@
 Nơi khai báo tất cả các "món đồ nghề" mà ReAct Agent có thể gọi.
 """
 
-def get_weather(location: str) -> str:
+def escalate_to_human(query: str) -> str:
     """
-    Tra cứu thời tiết hiện tại của một thành phố.
-    
-    Args:
-        location (str): Tên thành phố (Ví dụ: 'Hà Nội', 'TP.HCM', 'Đà Nẵng')
-        
-    Returns:
-        str: Thông tin thời tiết chi tiết
+    Tool: escalate_to_human
+    Mô tả: Gọi một chuyên gia con người để xử lý câu hỏi hoặc vấn đề phức tạp.
+    Input: query (str) - Câu hỏi hoặc vấn đề cần được chuyên gia con người xử lý.
+    Output: str - Phản hồi từ chuyên gia con người.
     """
-    loc_lower = location.lower()
-    if "hà nội" in loc_lower or "ha noi" in loc_lower:
-        return "Thời tiết Hà Nội: 28°C, Nắng nhẹ, Độ ẩm 65%."
-    elif "hồ chí minh" in loc_lower or "tp.hcm" in loc_lower or "hcm" in loc_lower:
-        return "Thời tiết TP.HCM: 33°C, Nắng nóng, Có mây."
-    elif "đà nẵng" in loc_lower or "da nang" in loc_lower:
-        return "Thời tiết Đà Nẵng: 30°C, Gió nhẹ, Mát mẻ."
-    else:
-        return f"LỖI: Không tìm thấy dữ liệu thời tiết cho địa điểm '{location}'."
+    # Logic giả lập để gọi chuyên gia con người
+    return f"Chuyên gia con người đã nhận được câu hỏi: '{query}' và sẽ phản hồi sớm."
+
+def request_clarification(query: str) -> str:
+    """
+    Tool: request_clarification
+    Mô tả: Yêu cầu người dùng cung cấp thêm thông tin hoặc làm rõ câu hỏi.
+    Input: query (str) - Câu hỏi hoặc vấn đề cần làm rõ.
+    Output: str - Yêu cầu làm rõ từ người dùng.
+    """
+    # Logic giả lập để yêu cầu làm rõ
+    return f"Xin vui lòng cung cấp thêm thông tin về: '{query}'."
+
+def audit_log(action: str) -> str:
+    """
+    Tool: audit_log
+    Mô tả: Ghi lại các hành động hoặc sự kiện quan trọng để phục vụ kiểm toán.
+    Input: action (str) - Hành động hoặc sự kiện cần ghi lại.
+    Output: str - Xác nhận rằng hành động đã được ghi lại.
+    """
+    # Logic giả lập để ghi log
+    return f"Hành động '{action}' đã được ghi lại trong hệ thống kiểm toán."
+
+def check_budget_remaining() -> str:
+    """
+    Tool: check_budget_remaining
+    Mô tả: Kiểm tra số dư ngân sách còn lại.
+    Input: None
+    Output: str - Thông tin về số dư ngân sách.
+    """
+    return "Số dư ngân sách còn lại: 50,000,000 VNĐ."
+
+def check_budget_limit() -> str:
+    return "Ngân sách tối đa cho phép: 100,000,000 VNĐ."
 
 
-def search_flights(origin: str, destination: str) -> str:
+def check_request_history() -> str:
     """
-    Tra cứu chuyến bay giữa hai địa điểm.
-    
-    Args:
-        origin (str): Nơi đi (Ví dụ: 'TP.HCM')
-        destination (str): Nơi đến (Ví dụ: 'Hà Nội')
-        
-    Returns:
-        str: Danh sách chuyến bay khả dụng và giá vé
+    Tool: check_request_history
+    Mô tả: Kiểm tra lịch sử các yêu cầu đã được thực hiện.
+    Input: None
+    Output: str - Thông tin về lịch sử yêu cầu.
     """
-    return (
-        f"Chuyến bay từ {origin} -> {destination} ngày mai:\n"
-        f"1. VN123 (08:00) - Giá: 1,500,000 VNĐ (Còn vé)\n"
-        f"2. VJ456 (14:30) - Giá: 1,200,000 VNĐ (Còn vé)"
-    )
+    return "Lịch sử yêu cầu: 1. Yêu cầu A - Đã hoàn thành, 2. Yêu cầu B - Đang xử lý."
+
+def send_notification(message: str) -> str:
+    """
+    Tool: send_notification
+    Mô tả: Gửi thông báo đến người dùng hoặc hệ thống.
+    Input: message (str) - Nội dung thông báo cần gửi.
+    Output: str - Xác nhận rằng thông báo đã được gửi.
+    """
+    # Logic giả lập để gửi thông báo
+    return f"Thông báo đã được gửi: '{message}'."
 
 
 # Danh sách các tool được đăng ký để Agent sử dụng
 AVAILABLE_TOOLS = {
-    "get_weather": get_weather,
-    "search_flights": search_flights,
+    "escalate_to_human": escalate_to_human,
+    "request_clarification": request_clarification,
+    "audit_log": audit_log,
+    "check_budget_remaining": check_budget_remaining,
+    "check_budget_limit": check_budget_limit,
+    "check_request_history": check_request_history,
+    "send_notification": send_notification,
 }

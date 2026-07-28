@@ -136,12 +136,13 @@ class OpenRouterProvider(BaseLLMProvider):
 
 
 class MockProvider(BaseLLMProvider):
-    """Offline Mock Provider (Cho bài test không cần kết nối API)
+    """Offline Mock Provider (Cho bài test không cần kết nối API)"""
+    def __init__(self):
+        self.model_name = "mock-offline"
+        self._call_count = 0
 
-    Mô phỏng ReAct Agent responses cho domain duyệt chi phí.
-    Dùng để demo offline khi chưa có API key.
-    """
     def generate(self, prompt: str, system_prompt: str = "") -> str:
+        self._call_count += 1
         text = prompt.lower()
 
         # Multi-step: kiểm tra ngân sách + đề xuất chi phí

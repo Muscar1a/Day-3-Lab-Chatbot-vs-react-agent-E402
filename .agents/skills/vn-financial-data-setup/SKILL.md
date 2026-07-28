@@ -1,13 +1,13 @@
 ---
 name: vn-financial-data-setup
-description: Use when setting up Python environment for Vietnam stock market data (vnstock, yfinance) — especially when numpy fails to build, Python 3.14 is too new, vnstock API has changed, or you need to pick the right data source for VN equities.
+description: Use when setting up Python environment for Vietnam stock market data (vnstock, yfinance) or configuring LLM providers (Google AI Studio, gemma models) — especially when numpy fails to build, Python 3.14 is too new, vnstock API has changed, gemini timeout hangs, or you need to pick the right data source for VN equities.
 ---
 
 # VN Financial Data Environment Setup
 
 ## Overview
 
-Two-layer data stack for Vietnam financial data: vnstock (primary, VN-specific) + yfinance (fallback, global). Python 3.14 blocks vnstock; use `uv` for Python 3.11 venv.
+Two-layer data stack for Vietnam financial data: vnstock (primary, VN-specific) + yfinance (fallback, global). Python 3.14 blocks vnstock; use `uv` for Python 3.11 venv. LLM via Google AI Studio (free tier) with gemma-4-26b-a4b-it.
 
 ## Decision Flowchart
 
@@ -18,6 +18,16 @@ Need VN stock data?
 │         └── Old API (Vnstock().stock())? → DEPRECATED, use vnstock.api.* instead
 │         └── Source "TCBS"? → DEAD, use VCI/KBS/MSN/FMP
 └── NO → Use yfinance (global stocks, forex, crypto)
+
+Need LLM for this project?
+├── Free option → Google AI Studio: LLM_PROVIDER=gemini, get key at aistudio.google.com/apikey
+│         └── Model: LLM_MODEL=gemma-4-26b-a4b-it (or gemini-2.5-flash for faster)
+│         └── IMPORTANT: gemma-4-26b is LARGE — first call may take 60s+ cold start
+│         └── Fix: add HttpOptions(timeout=60000) to genai.Client()
+├── OpenAI → LLM_PROVIDER=openai + OPENAI_API_KEY
+├── Anthropic → LLM_PROVIDER=anthropic + ANTHROPIC_API_KEY
+├── OpenRouter → LLM_PROVIDER=openrouter + OPENROUTER_API_KEY
+└── Offline → LLM_PROVIDER=mock (simulated ReAct responses)
 ```
 
 ## Layer 1: vnstock (Primary — Vietnam stocks)
@@ -84,7 +94,6 @@ stock = Vnstock().stock(symbol='VNM', source='TCBS')  # ValueError!
 ## Layer 2: yfinance (Fallback — global data)
 
 ```bash
-# Works on any Python ≥ 3.10
 source .venv/bin/activate
 pip install yfinance
 ```
@@ -103,11 +112,39 @@ fin = ticker.financials      # 4 years income statement
 
 # Forex
 yf.Ticker("USDVND=X").info   # VND exchange rate
-
-# US indices
-yf.Ticker("^DJI").info       # Dow Jones
-yf.Ticker("^GSPC").info      # S&P 500
 ```
+
+## Layer 3: LLM Providers (src/providers.py)
+
+### Google AI Studio (Free — Recommended)
+
+```bash
+# .env:
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_key_from_aistudio.google.com/apikey
+LLM_MODEL=gemma-4-26b-a4b-it   # or gemini-2.5-flash (faster)
+```
+
+**Gemma-4-26b cold start fix**: gemma-4-26b-a4b-it is a large model. First call can take 60s+. The `GeminiProvider` in `src/providers.py` already has `HttpOptions(timeout=60000)` — if hang persists, switch to `gemini-2.5-flash` for development.
+
+### GeminiProvider Architecture
+
+```python
+class GeminiProvider(BaseLLMProvider):
+    def __init__(self, api_key=None, model=None):
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        self.model_name = model or os.getenv("LLM_MODEL") or "gemini-2.5-flash"
+```
+
+- Reads `GEMINI_API_KEY` and `LLM_MODEL` from env
+- Factory: `get_llm_provider("gemini")` or auto-detects from `LLM_PROVIDER`
+- Mock provider simulates full ReAct flow for offline testing (`LLM_PROVIDER=mock`)
+
+## Vnstock Ads Banner
+
+vnstock prints Insiders Program ads on every call. To suppress:
+- Join Insiders Program at https://vnstocks.com/insiders-program
+- Or redirect stderr: `2>/dev/null`
 
 ## Dead Ends — Do NOT try
 
@@ -124,21 +161,27 @@ yf.Ticker("^GSPC").info      # S&P 500
 uv venv .venv-py311 --python 3.11
 source .venv-py311/bin/activate
 uv pip install google-genai openai anthropic python-dotenv requests vnstock yfinance
+
+# For LLM-only work (no stock data needed):
+source .venv/bin/activate
+pip install google-genai openai anthropic python-dotenv requests
+
+# .env for Google AI Studio:
+echo 'LLM_PROVIDER=gemini' > .env
+echo 'GEMINI_API_KEY=<key_from_aistudio.google.com>' >> .env
+echo 'LLM_MODEL=gemini-2.5-flash' >> .env   # fast for development
 ```
-
-## Vnstock Ads Banner
-
-vnstock prints Insiders Program ads on every call. To suppress:
-- Join Insiders Program at https://vnstocks.com/insiders-program
-- Or redirect stderr: `2>/dev/null`
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---------|-----|
-| `vnstock from vnstock import Vnstock` | Use `from vnstock.api.quote import Quote` |
+| `from vnstock import Vnstock` | Use `from vnstock.api.quote import Quote` |
 | `source='TCBS'` | Use `source='VCI'` |
 | `pip install vnstock` on Python 3.14 | Use `uv venv .venv-py311 --python 3.11` |
 | `from vnstock.api.finance import Finance` | Correct import is `vnstock.api.financial` (with "al") |
 | Trying VNIndex via yfinance | Use E1VFVN30.VN ETF as proxy |
 | `pip install dnspy` for finance | That's a DNS library — wrong package |
+| Gemini call hangs 120s+ | gemma-4-26b cold start. Use gemini-2.5-flash for dev, or wait 60s |
+| `load_dotenv()` AssertionError | Call from project root, not chdir after import |
+| `.env` API key exposed | Ensure `.gitignore` has `.env` (it does — verified) |
